@@ -1,0 +1,59 @@
+#+TITLE: Teoria Współbieżności - Zadanie 1
+#+OPTIONS: toc:nil
+#+OPTIONS: num:nil
+#+OPTIONS: html-postamble:nil
+
+* Wstęp
+
+Będziemy używać funkcje z tabeli poniżej. Pętla ~while~ będzie używana jako wirująca blokada.
+
+| send(addr, msg)         | nieblokujące wysłanie                                                 |
+| bsend(addr, msg)        | blokujące wysłanie                                                    |
+| receive(addr, msg, flg) | nieblokujący odbiór, pole ~flg~ ustawione na *1* gdy odebrano wiadomość |
+| breceive(addr, msg)     | blokujący odbiór                                                      |
+
+* Napisz pseudo-code funkcji równoważnej ~bsend~ przy pomocy ~send~, ~receive~ i wirującej blokady.
+  
+  - Wysyłamy wiadomość za pomocą nieblokującego ~send~
+  - Następnie tworzymy zmienną ~ack~, która zostanie ustawiona na *1* po odebraniu wiadomości potwierdzającej.
+  - Pętla ~while~, pełniąca rolę wirującej blokady nie pozwoli na zakończenie funkcji bez otrzymania potwierdzenia.
+
+  #+begin_src python
+  def bsend(addr, msg):
+    send(addr, msg)
+    ack = 0
+    while ack == 0:
+      receive(addr, _, &ack)
+  #+end_src
+
+  Powyższe rozwiązanie jest wrażliwe na błędy, bo może dojść do sytuacji w której inna wiadomość wysłana przez gniazdo
+  docelowe zostanie zinterpretowana jako potwierdzenie.
+  Możliwym rozwiązaniem jest dodanie identyfikatora wiadmości i wymuszenie żeby druga strona go odsyłała.
+
+  #+begin_src python
+  def bsend(addr, msg):
+    msg_id = gen_identifier()
+    send(addr, msg_id + msg)
+    while True:
+      response = None
+      receive(addr, response, _)
+      if response == "ACK" + msg_id:
+        return
+  #+end_src
+
+  Jeżeli przyjmiemy, że gniazda nie nadają jednocześnie to pierwsze rozwiązanie powinno być wystarczające.
+
+* Napisz pseudo-code funkcji równoważnej ~breceive~ przy pomocy ~receive~ i wirującej blokady.
+
+  ~breceive~ jest dużo prostsze od ~bsend~, ponieważ nie wymusza obustronnego porozumienia gniazd.
+
+  #+begin_src python
+  def breceive(addr, msg):
+    ack = 0
+    response = None
+    while True:
+      receive(addr, response, ack)
+      if ack == 1:
+        msg = response
+        break
+  #+end_src
