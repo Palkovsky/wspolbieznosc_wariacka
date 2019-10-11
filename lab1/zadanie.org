@@ -1,0 +1,115 @@
+#+TITLE: Teoria Współbieżności - Lab 1
+#+AUTHOR: Dawid Macek
+#+OPTIONS: toc:nil
+#+OPTIONS: num:nil
+#+OPTIONS: html-postamble:nil
+
+* TW - Lab 1
+
+W systemie dziala N wątkow, które dzielą obiekt licznika (początkowy stan licznika = 0).
+Każdy wątek wykonuje w pętli 5 razy inkrementację licznika.
+Zakładamy, że inkrementacja składa się z sekwencji trzech instrukcji: read, inc, write (odczyt z pamięci, zwiększenie o 1, zapis do pamięci). 
+Wątki nie są synchronizowane.
+
+** Jaka jest teoretycznie najmniejsza wartość licznika po zakończeniu działania wszystkich wątków i jaka kolejność instrukcji (przeplot) do niej prowadzi?
+   Najmniejsza możliwa wartość wyniesie *5*. 
+   Wynika to z tego, że każdy wątek dokonuje inkrementacji pięć razy i mimo tego, że inkrementacje będą się wzajemnie znosić(odczytanie tej samej wartości i zapis tej samej),
+   to z perspektywy pojedynczego wątku pojedyncza inkrementacja zawsze zostaje dokonana. Jedynym problemem jest to, że nie brane jest pod uwagę to, że zmienna mogła się zmienić po odczycie.
+
+*** Przykład 
+    - Wszystkie N wątków odczytują wartość licznika jako 0.
+    - (N-1) wątków kończy działanie, ale N-ty nie zostaje w ogóle wykoany.
+    - N-ty wątek kończy działanie dokonując inkrementacji pięć razy
+
+      |   | t1    | t2    | ... | tn    | Komentarz                               |
+      |---+-------+-------+-----+-------+-----------------------------------------|
+      | / | <     | >     |     | <>    | <>                                      |
+      |   | -     | -     | ... | READ  | // Wątek N czyta jako pierwszy          |
+      |---+-------+-------+-----+-------+-----------------------------------------|
+      |   | READ  | -     | ... | -     | // Wątek t1 wykonuje się w całości      |
+      |   | INC   | -     | ... | -     |                                         |
+      |   | WRITE | -     | ... | -     |                                         |
+      |   | INC   | -     | ... | -     |                                         |
+      |   | WRITE | -     | ... | -     |                                         |
+      |   | INC   | -     | ... | -     |                                         |
+      |   | WRITE | -     | ... | -     |                                         |
+      |   | INC   | -     | ... | -     |                                         |
+      |   | WRITE | -     | ... | -     |                                         |
+      |   | INC   | -     | ... | -     |                                         |
+      |   | WRITE | -     | ... | -     |                                         |
+      |---+-------+-------+-----+-------+-----------------------------------------|
+      |   | -     | READ  | ... | -     | // Wątek t2 wykonuje się w całości      |
+      |   | -     | INC   | ... | -     |                                         |
+      |   | -     | WRITE | ... | -     |                                         |
+      |   | -     | INC   | ... | -     |                                         |
+      |   | -     | WRITE | ... | -     |                                         |
+      |   | -     | INC   | ... | -     |                                         |
+      |   | -     | WRITE | ... | -     |                                         |
+      |   | -     | INC   | ... | -     |                                         |
+      |   | -     | WRITE | ... | -     |                                         |
+      |   | -     | INC   | ... | -     |                                         |
+      |   | -     | WRITE | ... | -     |                                         |
+      |---+-------+-------+-----+-------+-----------------------------------------|
+      |   | -     | -     | ... | -     | // Pozostałe wątki poza tn wykonują się |
+      |---+-------+-------+-----+-------+-----------------------------------------|
+      |   | -     | -     | ... | INC   |                                         |
+      |   | -     | -     | ... | WRITE | // LICZNIK = 1                          |
+      |   | -     | -     | ... | INC   |                                         |
+      |   | -     | -     | ... | WRITE | // LICZNIK = 2                          |
+      |   | -     | -     | ... | INC   |                                         |
+      |   | -     | -     | ... | WRITE | // LICZNIK = 3                          |
+      |   | -     | -     | ... | INC   |                                         |
+      |   | -     | -     | ... | WRITE | // LICZNIK = 4                          |
+      |   | -     | -     | ... | INC   |                                         |
+      |   | -     | -     | ... | WRITE | // LICZNIK = 5                          |
+
+
+      
+** Analogiczne pytanie -- jaka jest maksymalna wartość licznika i odpowiedni przeplot instrukcji?
+   Największa maksymalna wartość licznika wyniesie *5N*, czyli tyle ile otrzymalibyśmy stostując synchronizację.
+   *5N* nie zostanie przekroczone, ponieważ nie ma możliwości aby jeden wątek był w stanie dokonać podwójnej inkrementacji.
+   Problem jest sformułowany w ten sposób, że inkrementacje mogą się znosić, ale nie dublować. 
+   Aby mogły się dublować musiałaby istnieć możliwość odcztania większej niż obecna wartości licznika.
+
+*** Przykład
+
+      |   | t1    | t2    | ... | tn    | Komentarz              |
+      |---+-------+-------+-----+-------+------------------------|
+      | / | <     | >     |     | <>    | <>                     |
+      |   | READ  | -     | ... | -     |                        |
+      |   | INC   | -     | ... | -     |                        |
+      |   | WRITE | -     | ... | -     | // LICZNIK = 1         |
+      |   | INC   | -     | ... | -     |                        |
+      |   | WRITE | -     | ... | -     | // LICZNIK = 2         |
+      |   | INC   | -     | ... | -     |                        |
+      |   | WRITE | -     | ... | -     | // LICZNIK = 3         |
+      |   | INC   | -     | ... | -     |                        |
+      |   | WRITE | -     | ... | -     | // LICZNIK = 4         |
+      |   | INC   | -     | ... | -     |                        |
+      |   | WRITE | -     | ... | -     | // LICZNIK = 5         |
+      |---+-------+-------+-----+-------+------------------------|
+      |   |       | READ  |     |       |                        |
+      |   | -     | INC   | ... | -     |                        |
+      |   | -     | WRITE | ... | -     | // LICZNIK = 6         |
+      |   | -     | INC   | ... | -     |                        |
+      |   | -     | WRITE | ... | -     | // LICZNIK = 7         |
+      |   | -     | INC   | ... | -     |                        |
+      |   | -     | WRITE | ... | -     | // LICZNIK = 8         |
+      |   | -     | INC   | ... | -     |                        |
+      |   | -     | WRITE | ... | -     | // LICZNIK = 9         |
+      |   | -     | INC   | ... | -     |                        |
+      |   | -     | WRITE | ... | -     | // LICZNIK = 10        |
+      |---+-------+-------+-----+-------+------------------------|
+      |   | -     | -     | ... | -     | // Pozostałe wątki     |
+      |---+-------+-------+-----+-------+------------------------|
+      |   | -     | -     |     | READ  |                        |
+      |   | -     | -     | ... | INC   |                        |
+      |   | -     | -     | ... | WRITE | // LICZNIK = (n-1)*5+1 |
+      |   | -     | -     | ... | INC   |                        |
+      |   | -     | -     | ... | WRITE | // LICZNIK = (n-1)*5+2 |
+      |   | -     | -     | ... | INC   |                        |
+      |   | -     | -     | ... | WRITE | // LICZNIK = (n-1)*5+3 |
+      |   | -     | -     | ... | INC   |                        |
+      |   | -     | -     | ... | WRITE | // LICZNIK = (n-1)*5+4 |
+      |   | -     | -     | ... | INC   |                        |
+      |   | -     | -     | ... | WRITE | // LICZNIK = n*5       |
