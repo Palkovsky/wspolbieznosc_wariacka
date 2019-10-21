@@ -1,0 +1,5 @@
+* Naming convention
+
+  #+begin_src 
+  <m_size>_<p_c_size>_<sync_algorithm>_<rand_method>.csv
+  #+end_src
