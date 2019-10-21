@@ -1,0 +1,6 @@
+* Usage
+
+To generate plots from CSVs:
+#+begin_src bash
+python3 genplot.py results/*.csv
+#+end_src
