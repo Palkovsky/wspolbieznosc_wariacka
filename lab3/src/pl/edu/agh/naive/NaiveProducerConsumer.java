@@ -1,10 +1,8 @@
-package pl.edu.agh;
+package pl.edu.agh.naive;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 class Buffer {
     private final int m;
