@@ -74,8 +74,7 @@ class Producer extends Thread {
                 while (!buff.fits(n)) {
                     try {
                         buff.wait();
-                    } catch (InterruptedException ignored) {
-                    }
+                    } catch (InterruptedException ignored) {}
                 }
 
                 long timeWaited = System.nanoTime() - waitStart;
@@ -130,7 +129,7 @@ public class NaiveProducerConsumer {
     private static final int P = 1000;
     private static final int C = 1000;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         // System.out.println("M:" + M + ", P:" + P + ", C:" + C);
         System.out.println("role,n,time");
 
@@ -142,8 +141,6 @@ public class NaiveProducerConsumer {
         for(Thread t: threadList) { t.start(); }
 
         // Collect output for 10 seconds
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException ignored) { }
+        Thread.sleep(5000);
     }
 }

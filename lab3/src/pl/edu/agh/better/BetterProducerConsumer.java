@@ -10,6 +10,10 @@ import java.util.concurrent.locks.ReentrantLock;
 class Buffer {
     private final int m;
     private int size;
+
+    private final Lock writerEntranceLock;
+    private final Lock readerEntranceLock;
+
     private final Lock lock;
     private final Condition enoughFree;
     private final Condition enoughElements;
@@ -20,6 +24,9 @@ class Buffer {
         lock = new ReentrantLock(true);
         enoughFree = lock.newCondition();
         enoughElements = lock.newCondition();
+
+        writerEntranceLock = new ReentrantLock(true);
+        readerEntranceLock = new ReentrantLock(true);
     }
 
     private int capacity () { return 2*m; }
@@ -29,6 +36,7 @@ class Buffer {
     }
 
     public void put(int n) throws InterruptedException {
+        writerEntranceLock.lock();
         lock.lock();
 
         if (n > m) { throw new IllegalArgumentException("n must be less or equal to m");  }
@@ -38,11 +46,13 @@ class Buffer {
             this.size += n;
             enoughElements.signal();
         } finally {
+            writerEntranceLock.unlock();
             lock.unlock();
         }
     }
 
     public void take(int n) throws InterruptedException {
+        readerEntranceLock.lock();
         lock.lock();
 
         if (n > m) { throw new IllegalArgumentException("n must be less or equal to m"); }
@@ -52,6 +62,7 @@ class Buffer {
             this.size -= n;
             enoughFree.signal();
         } finally {
+            readerEntranceLock.unlock();
             lock.unlock();
         }
     }
@@ -79,10 +90,10 @@ class Producer extends Thread {
             } else {
                 n = r.nextInt(buff.getM()/1000)+1;
             }
+
             // Equal
-            /*
-            n = r.nextInt(buff.getM()) + 1;
-            */
+            // n = r.nextInt(buff.getM()) + 1;
+
             long waitStart = System.nanoTime();
             try {
                 buff.put(n);
@@ -107,6 +118,7 @@ class Consumer extends Thread {
 
         while (true) {
             int n;
+
             // Lower values more often
             if(r.nextInt(10) > 6) {
                 n = r.nextInt(buff.getM()) + 1;
@@ -114,9 +126,9 @@ class Consumer extends Thread {
                 n = r.nextInt(buff.getM()/1000)+1;
             }
             // Equal
-            /*
-            n = r.nextInt(buff.getM()) + 1;
-*/
+
+            //n = r.nextInt(buff.getM()) + 1;
+
             long waitStart = System.nanoTime();
             try {
                 buff.take(n);

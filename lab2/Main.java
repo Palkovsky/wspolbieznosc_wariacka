@@ -56,14 +56,12 @@ class NumSeqWriter {
 
     private Runnable getThreadLogic(int i) {
         return () -> {
-            synchronized (this.counter) {
-                for(int j = 0; j < this.sequences_count; j++) {
+            for(int j = 0; j < this.sequences_count; j++) {
+                synchronized (this.counter) {
                     // Wait if on wrong position.
                     while (this.counter.current() != i) {
                         try { this.counter.wait(); }
-                        catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
+                        catch (InterruptedException ignored) {}
                     }
                     // Print (i+1), which is constant.
                     System.out.print(i+1);
