@@ -14,15 +14,17 @@ import java.util.*;
  * Dla większych ilości wątków czasy wyknania są podobne co dla dwóch wątków.
  * Dla jeszcze większych ilości można zauważyć delikatne wydłużenie czasu związane z zarządzaniem wieloma wątkami.
  * ===== Metoda z edycją BufferedImage w wątku
- * Podobnie jak do metody z buforem, z tym że czasy są średnio większe.
- * Może to świadczyć o tym, że obiekt BufferedImage stosuje wewnętrzną synchronizację.
- */
+ * Podobnie jak do metody z buforem, z tym że czasy są średnio(ale nieznacznie) większe.
+ * Nie synchronizowanie na obiekcie BufferedImage nie wydaje się psuć działania programu.
+ * Jeżeli BufferedImage używa zwykłych Javowych tablic(nie Collections), to wywoływanie tylko .setRGB() dla różnych koordynatów powinno być bezpieczne.
+ * Jeżeli zaczeniemy synchronizować wewnątrz podwójnie zagnieżdżonej pętli for to czasy względem metody z buforem czasy wzrosną znacznie.
+*/
 
 class MandelbrotWindow extends JFrame {
     private static final int WIDTH = 800;
     private static final int HEIGHT = 600;
-    private static final int THREADS_COUNT = 2;
-    private static final int TASK_COUNT = THREADS_COUNT*10;
+    private static final int THREAD_COUNT = 2;
+    private static final int TASK_COUNT = THREAD_COUNT*10;
     private static final int ROWS_PER_THREAD = HEIGHT/TASK_COUNT;
 
     private static final int MAX_ITER = 1500;
@@ -41,7 +43,7 @@ class MandelbrotWindow extends JFrame {
         long timeStart = System.nanoTime();
 
         // Initialize thread pool
-        ExecutorService executorService = Executors.newFixedThreadPool(THREADS_COUNT);
+        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
 
         // Submit all thread into thread pool
         List<Future<int[][]>> futures = new ArrayList<>();
