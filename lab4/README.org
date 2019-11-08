@@ -1,0 +1,4 @@
+* Generating plots
+  #+begin_src bash
+  python3 genplot.py results.csv
+  #+end_src
