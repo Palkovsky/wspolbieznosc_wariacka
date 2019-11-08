@@ -1,5 +1,6 @@
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
+import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import java.util.concurrent.*;
 import java.util.stream.*;
@@ -8,7 +9,6 @@ import java.util.*;
 /*
  * ===== WNIOSKI
  * Testowane na dwu-rdzeniowym CPU z HT.
- * HT nie będzie grał tutaj istotnej roli, ponieważ wykonwyane obliczenia są CPU-bound.
  * ===== Metoda ze zwracaniem buforu
  * Dla dwóch wątków czas wykonania ulega skróceniu o około połowę.
  * Dla większych ilości wątków czasy wyknania są podobne co dla dwóch wątków.
@@ -23,22 +23,28 @@ import java.util.*;
 class MandelbrotWindow extends JFrame {
     private static final int WIDTH = 800;
     private static final int HEIGHT = 600;
-    private static final int THREAD_COUNT = 2;
-    private static final int TASK_COUNT = THREAD_COUNT*10;
-    private static final int ROWS_PER_THREAD = HEIGHT/TASK_COUNT;
 
-    private static final int MAX_ITER = 1500;
+    private static int THREAD_COUNT;
+    private static int TASK_COUNT;
+    private static int ROWS_PER_THREAD;
+
+    private static final int MAX_ITER = 50000;
     private static final double ZOOM = 150;
 
     private final BufferedImage img;
 
-    public MandelbrotWindow() throws InterruptedException, ExecutionException {
+    public MandelbrotWindow(int threads) throws InterruptedException, ExecutionException {
         super("Mandelbrot Set");
         setBounds(100, 100, WIDTH, HEIGHT);
         setResizable(false);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
+        THREAD_COUNT = threads;
+        TASK_COUNT = THREAD_COUNT*10;
+        ROWS_PER_THREAD = HEIGHT/TASK_COUNT;
+
         img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_RGB);
+
 
         long timeStart = System.nanoTime();
 
@@ -63,14 +69,17 @@ class MandelbrotWindow extends JFrame {
         }
 
         long timeElapsed = System.nanoTime() - timeStart;
+        /*
         System.out.println("==== SUMMARY ====");
-        System.out.println("Threads no.: " + THREADS_COUNT);
+        System.out.println("Threads no.: " + THREAD_COUNT);
         System.out.println("Task no.: " + TASK_COUNT);
         System.out.println("Dimensions: " + WIDTH + "x" + HEIGHT);
         System.out.println("Rows per thread: " + ROWS_PER_THREAD);
         System.out.println("Max iter: " + MAX_ITER);
         System.out.println("Time elapsed: " + timeElapsed + "ns" + "/" + timeElapsed/1000 + "us" + "/" + timeElapsed/1000000 + "ms");
         System.out.println("================");
+        */
+        System.out.println(THREAD_COUNT+","+timeElapsed);
     }
 
     private Callable<int[][]> rows(final int chunk) {
@@ -92,7 +101,6 @@ class MandelbrotWindow extends JFrame {
                         zx = tmp;
                         iter--;
                     }
-                    // img.setRGB(x, y, iter | (iter << 8));
                     buff[y-yStart][x] = iter | (iter << 8);
                 }
             }
@@ -109,10 +117,12 @@ class MandelbrotWindow extends JFrame {
 
 public class Main {
     public static void main(String[] args) {
-        try {
-            new MandelbrotWindow().setVisible(true);
-        } catch (Exception e) {
-            e.printStackTrace();
+        for(int i=1; i<=10; i++){
+            try {
+                new MandelbrotWindow(i).setVisible(false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }
