@@ -10,7 +10,7 @@
    #+end_src
 
 * Plots
-** On USB3.0 pendrive
+** USB 3.0 pendrive
 [[./usb.png]]
-** On SSD
+** SSD
 [[./ssd.png]]
