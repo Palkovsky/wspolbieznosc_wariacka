@@ -1,0 +1,16 @@
+* Uruchamianie skryptów
+** gencsv.sh
+   #+begin_src bash
+   ./gencsv.sh > out.csv
+   #+end_src
+** genplot.py
+   #+begin_src bash
+   cat out.csv | python3 genplot.py out.png
+   ./gencsv.sh | python3 genplot.py out.png
+   #+end_src
+
+* Plots
+** On USB3.0 pendrive
+[[./usb.png]]
+** On SSD
+[[./ssd.png]]
