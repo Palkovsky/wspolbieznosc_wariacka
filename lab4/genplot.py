@@ -20,10 +20,12 @@ if __name__ == "__main__":
     ys = [x[1]/1.0e9 for x in data]
 
     fig, ax = plt.subplots()
-    ax.set_xticks(np.arange(len(xs)+1))
+    # ax.set_xticks(np.arange(len(xs)+1))
 
-    ax.scatter(xs, ys, label="Execution Time(s)")
-    ax.axvline(x=4, label="CPU cores on testing machine", color="red")
+    ax.plot(xs, ys, label="Execution Time(s)")
+    ax.scatter([2], [ys[1]], label="Physical cores", color="blue")
+    ax.scatter([4], [ys[3]], label="Logical cores", color="red")
+
     ax.legend()
 
 
@@ -31,5 +33,6 @@ if __name__ == "__main__":
     title="Threads/Time plot")
     ax.grid()
 
-    fig.savefig("plot.png")
+    name = "plot.png" if len(sys.argv) <= 2 else sys.argv[2]
+    fig.savefig(name)
     plt.show()

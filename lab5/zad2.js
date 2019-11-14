@@ -3,6 +3,7 @@ const fs = require('fs');
 const async = require("async");
 
 function linecount(file, ok, error) {
+    console.log("linecout %s", file);
     let count = 0;
     fs.createReadStream(file).on('data', (chunk) => {
         count += chunk.toString('utf8')

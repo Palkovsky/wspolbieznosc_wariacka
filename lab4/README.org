@@ -3,4 +3,5 @@
   python3 genplot.py results.csv
   #+end_src
 
-[[./plot.png]]
+[[./plot10.png]]
+[[./plot60.png]]

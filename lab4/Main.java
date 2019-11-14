@@ -41,7 +41,7 @@ class MandelbrotWindow extends JFrame {
 
         THREAD_COUNT = threads;
         TASK_COUNT = THREAD_COUNT*10;
-        ROWS_PER_THREAD = HEIGHT/TASK_COUNT;
+        ROWS_PER_THREAD = (int) Math.ceil((HEIGHT*1.0)/TASK_COUNT);
 
         img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_RGB);
 
@@ -63,6 +63,7 @@ class MandelbrotWindow extends JFrame {
             int[][] buff = future.get();
             for(int y=0; y<ROWS_PER_THREAD; y++){
                for(int x=0; x<WIDTH; x++){
+                   if(x >= WIDTH || chunk*ROWS_PER_THREAD+y >= HEIGHT) { break; }
                     img.setRGB(x, chunk*ROWS_PER_THREAD+y, buff[y][x]);
                 }
             }
@@ -117,12 +118,19 @@ class MandelbrotWindow extends JFrame {
 
 public class Main {
     public static void main(String[] args) {
-        for(int i=1; i<=10; i++){
+        try {
+            new MandelbrotWindow(60).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        /*
+        for(int i=1; i<=60; i++){
             try {
-                new MandelbrotWindow(i).setVisible(false);
+                new MandelbrotWindow(i).dispose();
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+        */
     }
 }
