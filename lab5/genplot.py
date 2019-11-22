@@ -22,6 +22,8 @@ if __name__ == "__main__":
     plot_data = [sync, async]
 
     fig, ax = plt.subplots()
+    if len(sys.argv) >= 3:
+        fig.suptitle(sys.argv[2], fontsize=16)
 
     # Create the boxplot
     bp = ax.boxplot(plot_data, labels = ["Synchronous", "Asynchronous"])

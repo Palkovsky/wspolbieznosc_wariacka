@@ -54,7 +54,7 @@ function loop_a(n) {
  */
 const async = require("async");
 function loop_b(n) {
-    let tasks = [...Array(n).keys()].map((_) => {
+    let tasks = [...Array(n).keys()].map((i) => {
         return (nextTask) => task1(() => nextTask());
     });
     async.waterfall(tasks, () => console.log("done!"));

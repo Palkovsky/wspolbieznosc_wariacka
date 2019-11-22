@@ -3,7 +3,7 @@ const fs = require('fs');
 const async = require("async");
 
 function linecount(file, ok, error) {
-    console.log("linecout %s", file);
+    // console.log("linecout %s", file);
     let count = 0;
     fs.createReadStream(file).on('data', (chunk) => {
         count += chunk.toString('utf8')
@@ -23,6 +23,9 @@ function S_ISREG(mode) {
     return ((mode) & S_IFMT) == S_IFREG;
 }
 
+/*
+ * In this soulution I acquire whole path list before processing.
+ */
 function synchronous(root, ok) {
     let objects = walk.sync(root, {"return_object": true});
     let paths = Object.keys(objects);
@@ -81,7 +84,7 @@ let hrstart = process.hrtime();
 synchronous("./PAM08", (count) => {
     let hrend = process.hrtime(hrstart);
     let millis = Math.round(hrend[0]*1e3 + hrend[1]/1e6);
-    console.log("sync, %d", millis);
+    console.log("sync, %d, %d", millis, count);
 });
 
 <? } else { ?>
@@ -89,7 +92,7 @@ synchronous("./PAM08", (count) => {
 asynchronous("./PAM08", (count) => {
     let hrend = process.hrtime(hrstart);
     let millis = Math.round(hrend[0]*1e3 + hrend[1]/1e6);
-    console.log("async, %d", millis);
+    console.log("async, %d, %d", millis, count);
 });
 
 <?  } ?>

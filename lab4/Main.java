@@ -40,7 +40,7 @@ class MandelbrotWindow extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         THREAD_COUNT = threads;
-        TASK_COUNT = THREAD_COUNT*10;
+        TASK_COUNT = THREAD_COUNT;
         ROWS_PER_THREAD = (int) Math.ceil((HEIGHT*1.0)/TASK_COUNT);
 
         img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_RGB);
@@ -61,15 +61,18 @@ class MandelbrotWindow extends JFrame {
         for(int chunk = 0; chunk < TASK_COUNT; chunk++) {
             Future<int[][]> future = futures.get(chunk);
             int[][] buff = future.get();
+            /*
             for(int y=0; y<ROWS_PER_THREAD; y++){
                for(int x=0; x<WIDTH; x++){
                    if(x >= WIDTH || chunk*ROWS_PER_THREAD+y >= HEIGHT) { break; }
                     img.setRGB(x, chunk*ROWS_PER_THREAD+y, buff[y][x]);
                 }
             }
+            */
         }
 
         long timeElapsed = System.nanoTime() - timeStart;
+        executorService.shutdown();
         /*
         System.out.println("==== SUMMARY ====");
         System.out.println("Threads no.: " + THREAD_COUNT);
@@ -102,7 +105,11 @@ class MandelbrotWindow extends JFrame {
                         zx = tmp;
                         iter--;
                     }
-                    buff[y-yStart][x] = iter | (iter << 8);
+                    if(x >= WIDTH ||
+                       chunk*ROWS_PER_THREAD+y >= HEIGHT ||
+                       y >= ROWS_PER_THREAD) { break; }
+                    img.setRGB(x, chunk*ROWS_PER_THREAD+y, buff[y][x]);
+                    // buff[y-yStart][x] = iter | (iter << 8);
                 }
             }
 
@@ -118,19 +125,21 @@ class MandelbrotWindow extends JFrame {
 
 public class Main {
     public static void main(String[] args) {
+        /*
         try {
-            new MandelbrotWindow(60).show();
+            new MandelbrotWindow(1).show();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        /*
-        for(int i=1; i<=60; i++){
-            try {
-                new MandelbrotWindow(i).dispose();
-            } catch (Exception e) {
-                e.printStackTrace();
+        */
+        for(int j=0; j<4; j++){
+            for(int i=1; i<=10; i++){
+                try {
+                    new MandelbrotWindow(i);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
-        */
     }
 }
