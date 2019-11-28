@@ -30,6 +30,7 @@ Fork.prototype.acquire = function(cb) {
     // 2. gdy próba jest nieudana, zwiększa czas oczekiwania dwukrotnie
     //    i ponawia próbę, itd.
     /*
+    // CSMA/CD like
     let beb = (cb, attempt, total) => {
         let delay = randInt(0, 1 << attempt) + 1;
         setTimeout(() => {
@@ -103,7 +104,7 @@ Conductor.prototype.acquire = function(phys_id, fork_id, cb, timestamp) {
 
     // Perform actual fork.acquire()
     this.forks[fork_id].acquire((delay) => {
-        cb(delay + (Date.now() - timestamp));
+        cb(Date.now() - timestamp);
     });
 };
 
@@ -130,7 +131,6 @@ Conductor.prototype.release = function(phys_id, fork_id) {
         this.acquire(req_phys_id, req_fork_id, req_cb, req_timestamp);
     }
 };
-
 
 let Philosopher = function(id, forks, conductor) {
     this.id = id;

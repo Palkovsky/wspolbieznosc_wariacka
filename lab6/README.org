@@ -2,3 +2,10 @@
   #+begin_src bash
   ./gencsv.sh <N> > out.csv 
   #+end_src
+
+* Wnioski
+  - Rozwiązanie z arbitrem jest zależne od tego jak długo czasu poświęca się na spanie/jedzenie.
+  - Czasy oczekiwania w rozwiązaniu z arbitrem dla większych N znacznie rosną. Wynika to z algorytmu BEB, którego czasy oczekiwania rosną eksponencjalnie.
+  - Z powyższego powodu dla N >= 5 zawsze ustawiam maksymalną ilość dopuszczonych równą 4, bo inaczej nie doczekałbym się końca testu.
+  - Próba pożenienia klasycznych mechanizmów synchronizacji z Node.js to zły pomysł.
+  - Pozostałe dwie poprawne metody działają w rozsądnym czasie.
