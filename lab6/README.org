@@ -1,0 +1,4 @@
+* Uruchamianie skryptów
+  #+begin_src bash
+  ./gencsv.sh <N> > out.csv 
+  #+end_src

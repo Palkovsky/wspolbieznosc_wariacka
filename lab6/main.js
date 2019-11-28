@@ -198,8 +198,8 @@ Philosopher.prototype.startNaive = function(count) {
         f1.acquire((d1) => {
             // console.log(`Philospoher ${id}: Fork ${this.f1} acquired in ${d1}ms.`);
             f2.acquire((d2) => {
-                console.log(`naive, ${id}, ${d1}`);
-                console.log(`naive, ${id}, ${d2}`);
+                console.log(`naive,${id},${d1}`);
+                console.log(`naive,${id},${d2}`);
                 // console.log(`Philospoher ${id}: Fork ${this.f2} acquired in ${d2}ms. Time for eating!`);
                 this.eat((et) => {
                     // console.log(`Philospoher ${id}: Eating done after ${et}ms.`);
@@ -239,8 +239,8 @@ Philosopher.prototype.startAsym = function(count) {
         fork_fst.acquire((d1) => {
             // console.log(`Philospoher ${id}: Fork ${fork_fst_idx} acquired in ${d1}ms.`);
             fork_lst.acquire((d2) => {
-                console.log(`asym, ${id}, ${d1}`);
-                console.log(`asym, ${id}, ${d2}`);
+                console.log(`asym,${id},${d1}`);
+                console.log(`asym,${id},${d2}`);
                 // console.log(`Philospoher ${id}: Fork ${fork_lst_idx} acquired in ${d2}ms. Time for eating!`);
                 this.eat((et) => {
                     // console.log(`Philospoher ${id}: Eating done after ${et}ms.`);
@@ -274,8 +274,8 @@ Philosopher.prototype.startConductor = function(count) {
         conductor.acquire(id, f1, (d1) => {
             // console.log(`Philospoher ${id}: Fork ${f1} acquired in ${d1}ms.`);
             conductor.acquire(id, f2, (d2) => {
-                console.log(`conductor, ${id}, ${d1}`);
-                console.log(`conductor, ${id}, ${d2}`);
+                console.log(`conductor,${id},${d1}`);
+                console.log(`conductor,${id},${d2}`);
                 // console.log(`Philospoher ${id}: Fork ${f2} acquired in ${d2}ms. Time for eating!`);
                 this.eat((et) => {
                     // console.log(`Philospoher ${id}: Eating done after ${et}ms.`);
@@ -310,7 +310,7 @@ Philosopher.prototype.startAtomPick = function(count) {
     this.think((tt) => {
         // console.log(`Philosopher ${id}: Thinking done after ${tt}ms. Time to eat.`);
         this.acquirePair(f1, f2, (delay) => {
-            console.log(`atompick, ${id}, ${delay}`);
+            console.log(`atompick,${id},${delay}`);
             // console.log(`Philospoher ${id}: Forks ${f1} and ${f2} acquired in ${delay}ms. Time for eating!`);
             this.eat((et) => {
                 // console.log(`Philospoher ${id}: Eating done after ${et}ms.`);
@@ -322,7 +322,12 @@ Philosopher.prototype.startAtomPick = function(count) {
     });
 };
 
-let N = 10;
+if(process.argv.length < 4) {
+    console.log(`Usage: ${process.argv[1]} <N> <naive|asym|cond|atompick>`);
+    process.exit(1);
+}
+
+let N = parseInt(process.argv[2]);
 let forks = [];
 let philosophers = [];
 
@@ -335,8 +340,24 @@ for (let i = 0; i < N; i++) {
     philosophers.push(new Philosopher(i, forks, conductor));
 }
 
+let option = process.argv[3];
 for (let i = 0; i < N; i++) {
-    philosophers[i].startConductor(10);
+    switch(option) {
+    case "naive":
+        philosophers[i].startNaive(20);
+        break;
+    case "asym":
+        philosophers[i].startAsym(20);
+        break;
+    case "cond":
+        philosophers[i].startConductor(20);
+        break;
+    case "atompick":
+        philosophers[i].startAtomPick(20);
+        break;
+    default:
+        console.log(`Usage: ${process.argv[1]} <N> <naive|asym|cond|atompick>`);
+        process.exit(1);
+        break;
+    }
 }
-
-// setInterval(() => {}, 1000);
