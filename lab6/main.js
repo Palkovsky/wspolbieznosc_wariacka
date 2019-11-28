@@ -60,6 +60,22 @@ Fork.prototype.acquire = function(cb) {
     beb(cb, 1, 0);
 };
 
+// 
+Fork.prototype.acquire1 = function(cb) {
+    let wait = (cb, total) => {
+        setTimeout(() => {
+            total += 1;
+            if(this.state != 0) {
+                wait(cb, 1, total);
+            } else {
+                this.state = 1;
+                cb(total);
+            }
+        }, 1);
+    };
+    wait(cb, 0);
+};
+
 Fork.prototype.release = function() {
     this.state = 0;
 };
@@ -72,7 +88,7 @@ let Conductor = function(forks) {
 };
 
 Conductor.prototype.maxAllowed = function() {
-    return 4; // this.forks.length - 1;
+    return this.forks.length - 1;
 };
 
 Conductor.prototype.currentlyIn = function() {
@@ -103,7 +119,7 @@ Conductor.prototype.acquire = function(phys_id, fork_id, cb, timestamp) {
     }
 
     // Perform actual fork.acquire()
-    this.forks[fork_id].acquire((delay) => {
+    this.forks[fork_id].acquire1((delay) => {
         cb(Date.now() - timestamp);
     });
 };
