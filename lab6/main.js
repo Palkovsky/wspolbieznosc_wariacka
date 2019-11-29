@@ -45,7 +45,6 @@ Fork.prototype.acquire = function(cb) {
     };
     beb(cb, 0, 0);
     */
-
     let beb = (cb, delay, total) => {
         setTimeout(() => {
             total += delay;
@@ -60,20 +59,20 @@ Fork.prototype.acquire = function(cb) {
     beb(cb, 1, 0);
 };
 
-// 
 Fork.prototype.acquire1 = function(cb) {
-    let wait = (cb, total) => {
+    let beb = (cb, total) => {
+        let delay = 1;
         setTimeout(() => {
-            total += 1;
+            total += delay;
             if(this.state != 0) {
-                wait(cb, 1, total);
+                beb(cb,total);
             } else {
                 this.state = 1;
                 cb(total);
             }
-        }, 1);
+        }, delay);
     };
-    wait(cb, 0);
+    beb(cb, 0);
 };
 
 Fork.prototype.release = function() {
