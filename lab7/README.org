@@ -1,0 +1,18 @@
+* Zadanie 1
+  Maszyna stanów opisująca skrzynię biegów z sześcioma biegami.
+  Na każdy bieg przypadają dwa przejścia.
+  
+  [[./imgs/1a.png]]
+
+** Analiza grafu osiągalności
+   Aby przejść z jednego biegu na drugi trzeba znaleźć się na luzie.
+   Tylko jeden stan posiada markowanie.
+   [[./imgs/1b.png]]
+
+** Analiza niezmienników
+*** Niezmiennik miejsca(P-Invariants)
+    W sieci zawsze pozostaje jeden token, który może być w każdym stanie, więc jest ograniczona.
+*** Niezmiennik przejścia(T-Invariants)
+    Są zawsze dwie jedynki w wierszu, ponieważ najpierw trzeba wrzucić bieg, a z niego wyjść aby wrócić do stanu neutralnego.
+   [[./imgs/1c.png]]
+
