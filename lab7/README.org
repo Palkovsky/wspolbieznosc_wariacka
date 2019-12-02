@@ -1,18 +1,147 @@
+#+TITLE: Sieci Petriego - Sprawozdanie
+#+Author: Dawid Macek
+#+LANGUAGE: pl
+#+OPTIONS: date:nil
+#+LATEX_HEADER: \renewcommand*{\contentsname}{Spis treści}
+#+LATEX_HEADER: \usepackage[AUTO]{babel}
+#+LATEX_HEADER: \usepackage[margin=0.7in]{geometry}
+#+HTML_HEAD: <style>pre.src {background-color: #303030; color: #e5e5e5;}</style>
 * Zadanie 1
   Maszyna stanów opisująca skrzynię biegów z sześcioma biegami.
   Na każdy bieg przypadają dwa przejścia.
-  
+  #+attr_latex: :width 300px
   [[./imgs/1a.png]]
 
-** Analiza grafu osiągalności
-   Aby przejść z jednego biegu na drugi trzeba znaleźć się na luzie.
-   Tylko jeden stan posiada markowanie.
+** Klasyfikacja
+   Funkcja 'Classification' potwierdza, że powyższa sieć jest maszyną stanową.
+   #+attr_latex: :width 250px
+   [[./imgs/1d.png]]
+
+** Graf osiągalności
+   Aby przejść z jednego biegu na drugi trzeba znaleźć się w stanie neutralnym.
+   - Osiągalne znakowania: {1, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0}, ..., {0, 0, 0, 0, 0, 0, 1}
+   - Tylko jedno miejsce w danej chwili posiada token.
+   - Maksymalna liczba tokenów w każdym markowaniu wynosi jeden.
+   - Wszystkie miejsca są ~1-ograniczone~, więc sieć jest ~1-ograniczona~.
+   - Ponieważ sieć jest ~1-ograniczona~, jest też ~bezpieczna~.
+   - Wszystkie przejścia są ~żywe~, bo dla każdego markowania mogą być wykonane w przyszłości.
+   - Sieć jest ~żywa~, ponieważ wyszystkie przejścia są żywe.
+   #+attr_latex: :width 300px
    [[./imgs/1b.png]]
 
 ** Analiza niezmienników
-*** Niezmiennik miejsca(P-Invariants)
-    W sieci zawsze pozostaje jeden token, który może być w każdym stanie, więc jest ograniczona.
-*** Niezmiennik przejścia(T-Invariants)
-    Są zawsze dwie jedynki w wierszu, ponieważ najpierw trzeba wrzucić bieg, a potem z niego wyjść aby wrócić do neutralnego.
-   [[./imgs/1c.png]]
+   - Analiza niezmienników miejsc pokazuje nam, że łączna ilość tokenów w sieci zawsze równa się jeden, więc sieć jest ~zachowawcza~.
+   - Analiza niezmienników przejść mówi nam, że aby wrócić do markowania początkowego trzeba wykonać dwa przejścia.
+   - Sieć jest ~odwracalna~.
+     #+attr_latex: :width 300px
+     [[./imgs/1c.png]]
 
+* Zadanie 2
+  Sieć wydaje się działać jak jakaś maszyna stanów z dodanym obok licznikiem.
+  Przy każdy odpaleniu *T2* licznik po prawej jest inkrementowany.
+  #+attr_latex: :width 300px
+  [[./imgs/2a.png]]
+
+** Graf pokrycia
+   - Osiągalne znakowania: {1, 0, 0, \omega{}}, {0, 1, 0, \omega{}}, {0, 0, 1, \omega{}}
+   - Ilość tokenów w *P3* może rosnąć w nieskończoność, dlatego stany *S3*, *S4*, *S5* mają *P3* zmarkowane jako \omega{}
+   - Przejścia są ~żywe~, ponieważ każde przejście może być w przyszłości odpalane.
+   - *T0* i *T2* odpalane są dzieki tokenowi krążącemu w lewej stronie sieci.
+   - *T1* odpalane jest dzięki tokenowi krążącemu w lewej stronie sieci i temu, że miejsce *P3* posiada token początkowy.
+   - Z powyższego wynika, że sieć jest żywa.
+   - Dla miejsc *P2*, *P1*, *P0* maksymalna liczba tokenów to jeden, więc ~są to miejsca ograniczone~.
+   - Dla miejsca *P3* maksymalna liczba tokenów rośnie w nieskończoność, więc miejsce ~nie jest ograniczone~.
+   #+attr_latex: :width 300px
+   #+CAPTION: Graf pokrycia powyższej sieci
+   [[./imgs/2b.png]]
+
+** Analiza niezmienników
+   - Analiza niezmienników miejsc potwierdza spotrzeżenie z punktu powyżej.
+   - Analiza niezmienników przejść jest pusta, ponieważ nie da się wrócić do markowania początkowego, dlatego że licznik cały czas rośnie.
+   - Z powyższego wynika, że sieć ~nie jest odwracalna~.
+   - Sieć nie jest ~ograniczona~, więc nie jest też ~bezpieczna~.
+   - Liczba tokenów w sieci nie jest stała, więc sieć nie jest ~zachowawcza~.
+   #+attr_latex: :width 350px
+   [[./imgs/2c.png]]
+
+* Zadanie 3
+  - Aby przejścia *Proces 1 zajmij* lub *Proces 2 zajmij* mogły zostać odpalone, mutex musi być posiadać token.
+  - Pomocniczne miejsca *Zajęte przez Proces 1* i *Zajęte przez proces 2* służą do wskazania procesu do do którego ma wrócić token.
+  - Przejścia *Proces 1 zwonij* i *Proces 2 zwolnij* odpalane gdy zasób zasób posiada token(czyli jest zajęty).
+#+attr_latex: :width 400px
+  [[./imgs/3a.png]]
+
+** Analiza niezmienników
+   Równanie ~M(Mutex) + M(Zasób) = 1~ pokazuje ochronę sekcji krytycznej. 
+   Mówi ono, że zawsze zachodzi ~M(Mutex) = 0 i M(Zasób) = 1~ - mutex zajęty, dostęp do zasobu niemożliwy.
+   I dla drugiego przypadku ~M(Mutex) = 1 i M(Zasób) = 0~ - mutex możliwy do zajęcia.
+#+attr_latex: :width 300px
+   [[./imgs/3b.png]]
+
+** Własności sieci
+   - Sieć jest ~1-ograniczona~, ponieważ żadne miejsce nie będzie mieć więcej niż jednego tokenu.
+   - Skoro sieć jest ~1-ograniczona~ to jest również ~bezpieczna~.
+   - W sieci zawsze można wrócić do markowania początkowego, więc jest ~odwracalna~.
+   - Wszystkie przejścia w sieci są ~żywe~, stąd sieć też jest ~żywa~.
+   - Liczba tokenów w sieci jest stała i wynosi ~3~, więc sieć jest ~zachowawcza~.
+   - Nie wypiszę wszystkich możliwych znakowań, tylko zwracam uwagę na to że znakowanie ~{0, 0, 1}~ dla ~{Proces 1, Proces 2, Zasób}~ nie będzie możliwe, bo przeczyłby wzajemnemu wykluczaniu. Wynika to z 4-tego równania.
+
+* Zadanie 4  
+  - Miejsce *P7* określa wolną ilość miejsc w buforze.
+  - Miejsce *P6* określa ilość wytworzonych elementów.
+  - Miejsca i stany po lewej opisują producenta, ponieważ przejśie *T0* odpalane tylko wtedy gdy jest miejsce w buforze.
+  - Miejsca i stany po prawiej opisują konsumenta, poneiważ przejście *T1* odpalane tylko wtedy gdy jakieś elementy wytworzone.
+#+attr_latex: :width 300px
+  [[./imgs/4a.png]]
+
+** Analiza niezmienników
+   - Równanie ~M(P6) + M(P7) = 3~ wskazuje na stałą wielkość bufora równą ~3~.
+   - Równanie ~M(P0) + M(P1) + M(P2) = 1~ mówi o tym, że producent tworzy nowe elementy pojedynczo.
+   - Równanie ~M(P3) + M(P4) + M(P5) = 1~ mówi o tym, że konsument przetwarza elementy pojedynczo.
+   - Sieć jest ~zachowawcza~, ponieważ ilość tokenów stała wynosząca pięć.
+#+attr_latex: :width 350px
+   [[./imgs/4b.png]]
+
+** Pozostałe własności
+   - Sieć jest ~żywa~, bo każde przejście zawsze może zostać uruchomione w przyszłości.
+   - Sieć jest ~odwracalna~, bo zawsze można wrócić do stanu początkowego(pusty bufor).
+   - Sieć jest ~3-ograniczona~, ponieważ żadne miejsce nie ma więcej niż *trzech* tokenów.
+   - Sieć ~nie jest bezpieczna~, ponieważ nie jest ~1-ograniczona~.
+
+* Zadanie 5
+  Jedyną zmianą względem sieci z zadana 4 jest usunięcie miejsca *P7*, które określało ilość wolnego miejsca w buforze.
+  Teraz przejście *T0* nie jest ograniczone ilością wolnego miejsca, więc producent może nieskończenie zapełniać bufor reprezentowany przez miejsce *P6*.
+  #+attr_latex: :width 350px
+  [[./imgs/5a.png]]
+
+** Analiza niezmienników
+   Miejsce *P6* nie jest pokryte w analizie niezmienników miejsc.
+   Wynika to z tego, że ilość tokenów w *P6* nie jest stała.
+   #+attr_latex: :width 350px
+   [[./imgs/5b.png]]
+
+** Własności sieci
+   - ~Nie jest zachowawcza~, ponieważ w buforze może powstawać dowolna ilość tokenów.
+   - ~Nie jest ograniczona~, ponieważ bufor może zapełniać się w nieskończoność.
+   - ~Nie jest bezpieczna~, bo nie jest ograniczona.
+   - ~Jest odwracalna~, ponieważ konsument może opróżnić bufor a następnie producent i konsument mogą wrócić do stanów początkowych.
+   - ~Jest żywa~, bo każde przejście może być uruchomione w przyszłości.
+
+* Zadanie 6
+  Przykład trochę mniejszej sieci z możliwością zakleszczenia wzięty z Wikipedii.
+  Istotną rzeczą jest tutaj nadanie maksymalnej pojemności wszystkim miejscom równą jeden, w innym wypadku graf osiągalności nie chciał się wygenerować.
+  #+attr_latex: :width 350px
+  [[./imgs/6a.png]]
+
+** State Space Analysis
+   Analiza znalazła najkrótszą ścieżkę prowadzącą do zakleszczenia.
+   Jeśli przejście *T1* zostanie odpalone to:
+     - *T0* nie może zostać odpalone, ponieważ *P1* będzie puste.
+     - *T3* nie może zostać odpalone, ponieważ *P0* będzie puste.
+     #+attr_latex: :width 200px
+   [[./imgs/6b.png]]
+
+** Graf osiągalności
+   Graf pokazuje, że zakleszczenie zachodzi dla markowania ~{0, 0, 1}~ dla miejsc ~{P0, P1, P2}~.
+   #+attr_latex: :width 350px
+   [[./imgs/6c.png]]
