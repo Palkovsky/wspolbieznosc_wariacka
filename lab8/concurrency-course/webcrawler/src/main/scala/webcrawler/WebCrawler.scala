@@ -8,11 +8,11 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.util.Try
 
-class ParseResult(val url: URL, root: TagNode) {
+class Parsed(val url: URL, root: TagNode) {
   val childrenUrls = {
     val elements = root.getElementsByName("a", true)
-    elements map { elem =>
-      elem.getAttributeByName("href")
+    elements map {
+      (elem) => elem.getAttributeByName("href")
     }
   }
 }
@@ -21,19 +21,15 @@ object Crawler {
   val cleaner = new HtmlCleaner
   val props = cleaner.getProperties
 
-  /**
-    * Returns Option with Futre containing crawled data.
-    *
-    * None returned when URL exception caught.
-    */
-  def apply(urlStr: String): Option[Future[ParseResult]] = {
-    val urlT = Try(new URL(urlStr))
-    val futureT = urlT map { url => Some(Future { parse(url) }) }
-    futureT.getOrElse(None)
+  def apply(url: URL): Future[Option[Parsed]] = {
+    Future { parse(url) }
   }
 
-  private def parse(url: URL): ParseResult = {
-    val root = cleaner.clean(url)
-    new ParseResult(url, root)
+  private def parse(url: URL): Option[Parsed] = {
+    val rootT = Try(cleaner.clean(url))
+    val resultT = rootT map {
+      (root) => Some(new Parsed(url, root))
+    }
+    resultT getOrElse { None }
   }
 }
