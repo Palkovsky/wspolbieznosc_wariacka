@@ -1,6 +1,6 @@
 package webcrawler
 
-import org.htmlcleaner.{TagNode, HtmlCleaner}
+import org.htmlcleaner.{TagNode, HtmlCleaner, PrettyXmlSerializer}
 import java.net.URL
 
 import scala.io.Source
@@ -8,7 +8,7 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.util.Try
 
-class Parsed(val url: URL, root: TagNode) {
+class Parsed(val url: URL, val root: TagNode) {
   val childrenUrls = {
     val elements = root.getElementsByName("a", true)
     elements map {
@@ -23,6 +23,10 @@ object Crawler {
 
   def apply(url: URL): Future[Option[Parsed]] = {
     Future { parse(url) }
+  }
+
+  def nodeToFile(node: TagNode, path: String): Unit = {
+    new PrettyXmlSerializer(props).writeToFile(node, path, "utf-8")
   }
 
   private def parse(url: URL): Option[Parsed] = {
