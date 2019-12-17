@@ -16,7 +16,7 @@ object Main extends App {
   prepareDirectory()
 
   val url = "https://www.icsr.agh.edu.pl/~balis/"
-  val counter = new AtomicInteger(0)
+  var counter = 0
 
   // Start  page traversal
   val crawler = CrawlerManager(url, 4)
@@ -24,11 +24,12 @@ object Main extends App {
   // While traversing, save to file
   crawler onParsed {
     case Some((depth, parsed)) => {
-      val value = counter.incrementAndGet()
-      val path = "./crawled/" + value + ".html"
+      counter += 1
+
+      val value = counter
+      val path = "crawled/" + value + ".html"
 
       println(s"[onParsed][$depth]: ${parsed.url} as $path")
-
       Crawler.nodeToFile(parsed.root, path)
     }
 
@@ -39,7 +40,6 @@ object Main extends App {
 
   // Wait for finish and print summary
   val future = crawler.awaitable()
-
   val results = Await.result(future, Duration.Inf)
 
   // URLs done parsing
@@ -72,5 +72,4 @@ object Main extends App {
       (file) => file.delete()
     }
   }
-
 }

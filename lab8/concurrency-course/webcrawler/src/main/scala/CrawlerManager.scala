@@ -1,14 +1,14 @@
 import webcrawler._
 
 import scala.concurrent._
-import ExecutionContext.Implicits.global
 import scala.util.Try
 import scala.util.{Success, Failure}
 import scala.collection.mutable._;
 
 import java.net.URL
+import java.util.concurrent.{ConcurrentHashMap, Executors, ThreadFactory}
+import java.lang.{Runnable, Thread}
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.ConcurrentHashMap
 import java.util.Collections
 
 class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
@@ -16,6 +16,19 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
   private type MParsedD = Option[(Depth, Parsed)]
   private type FParsed = Future[MParsed]
   private type Depth = Int
+
+  // Deaemon thread factory
+  private val daemonThreadFactory = new ThreadFactory() {
+    override def newThread(runnable: Runnable): Thread = {
+      val thread = Executors.defaultThreadFactory().newThread(runnable);
+      thread.setDaemon(true);
+      thread
+    }
+  }
+
+  // Custom Execution Context
+  implicit val ec =
+    ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(100, daemonThreadFactory))
 
   // Set of all futures.
   private val futurePool: Set[(Depth, FParsed)] = {
@@ -26,7 +39,8 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
 
     javaSet.asScala
   }
-  // Counter to keep track of finished futures.
+
+  // Counts how many futures finished.
   private val finishedCounter = new AtomicInteger(0)
 
   // URLs that no longer will be traversed
@@ -45,23 +59,27 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
   /**
     *  Creates Future awaiting end of all futures from futurePool.
     */
-  def awaitable(): Future[Set[(Depth, Parsed)]] = Future {
-    while (futurePool.size != finishedCounter.get) {
-      Thread.sleep(100)
-    }
-
-    val result = Set[(Depth, Parsed)]()
-    for ((depth, future) <- futurePool) {
-      future.value match {
-        case Some(Success(Some(x))) =>
-          result.add((depth, x))
-        case _ => {}
+  def awaitable(): Future[Set[(Depth, Parsed)]] = {
+    Future {
+      while(futurePool.size != finishedCounter.get) {
+        Thread.sleep(1000)
+      }
+    } map {
+      _ => {
+        futurePool map {
+          case (depth, future) =>
+            (depth, future.value)
+        } collect {
+          case (depth, (Some(Success(Some(x))))) =>
+            (depth, x)
+        }
       }
     }
-
-    result
   }
 
+  /**
+    * Sets user callback for on-the-fly crawling.
+    */
   def onParsed(f: MParsedD => Unit): Unit = {
     this.walkCallback = Some(f)
   }
@@ -75,25 +93,29 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
     }
 
     doneUrls.add(rootUrl)
+
     CrawlerManager.strToURL(rootUrl) map {
-      (url) => {
+      url => {
         val future = Crawler(url)
 
         future foreach {
-          (futureResult) => {
-
-            finishedCounter.incrementAndGet()
+          futureResult => {
+            // Call live-feedback function.
             walkCallback map {
               f => {
                 Try(f(futureResult map { result => (depth, result) }))
               }
             }
 
+            // Add batch of children urls to the pool.
             futureResult map {
-              (result) => {
-                result.childrenUrls foreach { (url) => newTask(url, depth+1) }
+              result => {
+                result.childrenUrls foreach { url => newTask(url, depth+1) }
               }
             }
+
+            // Increment finished counter
+            finishedCounter.incrementAndGet()
           }
         }
 

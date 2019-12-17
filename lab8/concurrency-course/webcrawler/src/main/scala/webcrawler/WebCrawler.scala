@@ -22,11 +22,17 @@ object Crawler {
   val props = cleaner.getProperties
 
   def apply(url: URL): Future[Option[Parsed]] = {
-    Future { parse(url) }
+    Future {
+      parse(url)
+    }
   }
 
-  def nodeToFile(node: TagNode, path: String): Unit = {
-    new PrettyXmlSerializer(props).writeToFile(node, path, "utf-8")
+  def nodeToFile(node: TagNode, path: String): Boolean = {
+    Try(new PrettyXmlSerializer(props).writeToFile(node, path, "utf-8")) map {
+      _ => true
+    } getOrElse {
+      false
+    }
   }
 
   private def parse(url: URL): Option[Parsed] = {
