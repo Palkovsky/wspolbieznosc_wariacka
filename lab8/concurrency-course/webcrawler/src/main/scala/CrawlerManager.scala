@@ -1,6 +1,7 @@
 import webcrawler._
 
 import scala.concurrent._
+import ExecutionContext.Implicits.global
 import scala.util.Try
 import scala.util.{Success, Failure}
 import scala.collection.mutable._;
@@ -17,32 +18,6 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
   private type FParsed = Future[MParsed]
   private type Depth = Int
 
-  // Deaemon thread factory
-  private val daemonThreadFactory = new ThreadFactory() {
-    override def newThread(runnable: Runnable): Thread = {
-      val thread = Executors.defaultThreadFactory().newThread(runnable);
-      thread.setDaemon(true);
-      thread
-    }
-  }
-
-  // Custom Execution Context
-  implicit val ec =
-    ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(100, daemonThreadFactory))
-
-  // Set of all futures.
-  private val futurePool: Set[(Depth, FParsed)] = {
-    import scala.collection.JavaConverters._
-
-    val map = new ConcurrentHashMap[(Depth, FParsed), java.lang.Boolean]
-    val javaSet = Collections.newSetFromMap(map)
-
-    javaSet.asScala
-  }
-
-  // Counts how many futures finished.
-  private val finishedCounter = new AtomicInteger(0)
-
   // URLs that no longer will be traversed
   private val doneUrls = Set[String]()
 
@@ -52,29 +27,8 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
     */
   private var walkCallback: Option[MParsedD => Unit] = None
 
-  def start(): Unit = {
+  def start(): Option[Future[Set[(Depth, Parsed)]]] = {
     newTask(rootUrl, 1)
-  }
-
-  /**
-    *  Creates Future awaiting end of all futures from futurePool.
-    */
-  def awaitable(): Future[Set[(Depth, Parsed)]] = {
-    Future {
-      while(futurePool.size != finishedCounter.get) {
-        Thread.sleep(1000)
-      }
-    } map {
-      _ => {
-        futurePool map {
-          case (depth, future) =>
-            (depth, future.value)
-        } collect {
-          case (depth, (Some(Success(Some(x))))) =>
-            (depth, x)
-        }
-      }
-    }
   }
 
   /**
@@ -87,7 +41,7 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
   /**
     * Adds new future, chains it with children futures and adds it to the futurePool.
     */
-  private def newTask(rootUrl: String, depth: Depth): Option[FParsed] = {
+  private def newTask(rootUrl: String, depth: Depth): Option[Future[Set[(Depth, Parsed)]]] = {
     if(depth > maxDepth || doneUrls.contains(rootUrl)) {
       return None
     }
@@ -96,31 +50,43 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
 
     CrawlerManager.strToURL(rootUrl) map {
       url => {
-        val future = Crawler(url)
+        val future = Future {
+          import webcrawler._
 
-        future foreach {
-          futureResult => {
-            // Call live-feedback function.
-            walkCallback map {
-              f => {
-                Try(f(futureResult map { result => (depth, result) }))
+          val maybeResult = Crawler.parse(url)
+          // Apply user callback
+          walkCallback map {
+            f => {
+              Try(f(maybeResult map { result => (depth, result) }))
+            }
+          }
+
+          maybeResult map {
+            result => {
+              val futures = result.childrenUrls map {
+                url => newTask(url, depth+1)
+              } collect {
+                case Some(fut) => fut
+              }
+
+              val future = Future.sequence(futures.toList)
+              future map {
+                futureSet => {
+                  val flatten = Set(futureSet).flatten.flatten
+                  flatten.add((depth, result))
+                  flatten
+                }
               }
             }
-
-            // Add batch of children urls to the pool.
-            futureResult map {
-              result => {
-                result.childrenUrls foreach { url => newTask(url, depth+1) }
-              }
-            }
-
-            // Increment finished counter
-            finishedCounter.incrementAndGet()
+          } getOrElse {
+            Future { Set[(Depth, Parsed)]() }
           }
         }
 
-        futurePool.add((depth, future))
-        future
+        for {
+          nextFuture <- future
+          results <- nextFuture
+        } yield (results)
       }
     }
   }

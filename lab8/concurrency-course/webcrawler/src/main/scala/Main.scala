@@ -16,10 +16,12 @@ object Main extends App {
   prepareDirectory()
 
   val url = "https://www.icsr.agh.edu.pl/~balis/"
+  val depth = 4
+
   var counter = 0
 
   // Start  page traversal
-  val crawler = CrawlerManager(url, 4)
+  val crawler = CrawlerManager(url, depth)
 
   // While traversing, save to file
   crawler onParsed {
@@ -30,16 +32,15 @@ object Main extends App {
       val path = "crawled/" + value + ".html"
 
       println(s"[onParsed][$depth]: ${parsed.url} as $path")
-      Crawler.nodeToFile(parsed.root, path)
+      parsed.save(path)
     }
-
     case _ => {}
   }
-  crawler.start()
 
 
   // Wait for finish and print summary
-  val future = crawler.awaitable()
+  val future = crawler.start().get
+  // val future = crawler.awaitable()
   val results = Await.result(future, Duration.Inf)
 
   // URLs done parsing
