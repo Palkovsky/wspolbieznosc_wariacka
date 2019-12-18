@@ -12,12 +12,12 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 object Main extends App {
-
-  prepareDirectory()
-
+  // Run parameters
   val url = "https://www.icsr.agh.edu.pl/~balis/"
   val depth = 4
 
+  // Prepare working directory
+  prepareDirectory()
   var counter = 0
 
   // Start  page traversal
@@ -25,7 +25,7 @@ object Main extends App {
 
   // While traversing, save to file
   crawler onParsed {
-    case Some((depth, parsed)) => {
+    (depth, parsed) => {
       counter += 1
 
       val value = counter
@@ -34,9 +34,7 @@ object Main extends App {
       println(s"[onParsed][$depth]: ${parsed.url} as $path")
       parsed.save(path)
     }
-    case _ => {}
   }
-
 
   // Wait for finish and print summary
   val future = crawler.start().get
@@ -50,7 +48,7 @@ object Main extends App {
       println(s"[*][$depth] ${result.url}")
   }
 
-  // Detected URLs
+  // Seen URLs
   println(s"Seen URLs:")
   results map {
     case (depth, result) => (depth, result.childrenUrls)

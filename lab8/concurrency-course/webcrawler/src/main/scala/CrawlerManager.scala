@@ -13,19 +13,16 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.Collections
 
 class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
-  private type MParsed = Option[Parsed]
-  private type MParsedD = Option[(Depth, Parsed)]
-  private type FParsed = Future[MParsed]
   private type Depth = Int
 
-  // URLs that no longer will be traversed
+  // Keeps track of already traversed URLs.
   private val doneUrls = Set[String]()
 
   /**
-    *  Called on singe future end.
-    *  Allows handling results more dynamically, before everyting finishes.
+    *  Called when page parsed.
+    *  Allows performing some arbitrary logic on-the-fly.
     */
-  private var walkCallback: Option[MParsedD => Unit] = None
+  private var walkCallback: Option[(Depth, Parsed) => Unit] = None
 
   def start(): Option[Future[Set[(Depth, Parsed)]]] = {
     newTask(rootUrl, 1)
@@ -34,59 +31,66 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
   /**
     * Sets user callback for on-the-fly crawling.
     */
-  def onParsed(f: MParsedD => Unit): Unit = {
+  def onParsed(f: (Depth, Parsed) => Unit): Unit = {
     this.walkCallback = Some(f)
   }
 
-  /**
-    * Adds new future, chains it with children futures and adds it to the futurePool.
-    */
   private def newTask(rootUrl: String, depth: Depth): Option[Future[Set[(Depth, Parsed)]]] = {
+    // Check if maxDepth reached or url excluded.
     if(depth > maxDepth || doneUrls.contains(rootUrl)) {
       return None
     }
 
+    // Make url excluded in future.
     doneUrls.add(rootUrl)
 
-    CrawlerManager.strToURL(rootUrl) map {
-      url => {
-        val future = Future {
-          import webcrawler._
+    // Check if URL is valid one.
+    val maybeUrl = CrawlerManager.strToURL(rootUrl)
+    if(maybeUrl.isEmpty) {
+      return None
+    }
 
-          val maybeResult = Crawler.parse(url)
-          // Apply user callback
-          walkCallback map {
-            f => {
-              Try(f(maybeResult map { result => (depth, result) }))
-            }
-          }
+    val url = maybeUrl.get
+    val future = Future {
+       blocking { Crawler(url) }
+    } flatMap {
+      joinResult(depth)
+    }
+    Some(future)
+  }
 
-          maybeResult map {
-            result => {
-              val futures = result.childrenUrls map {
-                url => newTask(url, depth+1)
-              } collect {
-                case Some(fut) => fut
-              }
+  /*
+   * Takes parsing result and returns future returning all joined results from children branches.
+   */
+  private def joinResult(depth: Depth)(maybeResult: Option[Parsed]): Future[Set[(Depth, Parsed)]] = {
+    // If failed, return neutral thing.
+    if(maybeResult.isEmpty) {
+      return Future { Set[(Depth, Parsed)]() }
+    }
 
-              val future = Future.sequence(futures.toList)
-              future map {
-                futureSet => {
-                  val flatten = Set(futureSet).flatten.flatten
-                  flatten.add((depth, result))
-                  flatten
-                }
-              }
-            }
-          } getOrElse {
-            Future { Set[(Depth, Parsed)]() }
-          }
-        }
+    val result = maybeResult.get
+    // Apply user-provided callback
+    walkCallback map {
+      f => blocking { Try(f(depth, result)) }
+    }
 
-        for {
-          nextFuture <- future
-          results <- nextFuture
-        } yield (results)
+    // Create children futures
+    val childrenFutures = result.childrenUrls map {
+      url => newTask(url, depth+1)
+    } collect {
+      case Some(fut) => fut
+    }
+
+    // Merge children futures using Future.sequence
+    val joined = Future.sequence(childrenFutures.toList)
+
+    // Flatten results from all children futures.
+    // Add current result to the result set.
+    joined map {
+      futureSet => {
+        val flatten = Set(futureSet).flatten.flatten
+        flatten.add((depth, result))
+        flatten
       }
     }
   }

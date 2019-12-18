@@ -35,7 +35,8 @@ object Crawler {
   val cleaner = new HtmlCleaner
   val props = cleaner.getProperties
 
-  def parse(url: URL): Option[Parsed] = {
+  def apply(url: URL): Option[Parsed] = {
+    // println(s"Starting ${url.toString}...")
     val rootT = Try(cleaner.clean(url))
     val resultT = rootT map {
       (root) => Some(new Parsed(url, root))
