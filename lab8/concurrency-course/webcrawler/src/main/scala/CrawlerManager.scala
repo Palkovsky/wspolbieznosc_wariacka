@@ -52,7 +52,7 @@ class CrawlerManager private(val rootUrl: String, val maxDepth: Int) {
 
     val url = maybeUrl.get
     val future = Future {
-       blocking { Crawler(url) }
+       blocking {  Crawler(url) }
     } flatMap {
       joinResult(depth)
     }
