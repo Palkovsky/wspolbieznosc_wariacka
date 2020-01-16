@@ -1,0 +1,4 @@
+* Running
+  #+begin_src bash
+  cat [prob1/prob2/prob3] | python3 main.py
+  #+end_src
