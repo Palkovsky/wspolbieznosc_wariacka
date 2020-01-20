@@ -1,4 +1,405 @@
-* Running
-  #+begin_src bash
-  cat [prob1/prob2/prob3] | python3 main.py
+#+TITLE: Teoria Śladów - Sprawozdanie
+#+Author: Dawid Macek
+#+LANGUAGE: pl
+#+OPTIONS: date:nil
+#+LATEX_HEADER: \renewcommand*{\contentsname}{Spis treści}
+#+LATEX_HEADER: \usepackage[AUTO]{babel}
+#+LATEX_HEADER: \usepackage[margin=0.7in]{geometry}
+#+HTML_HEAD: <style>pre.src {background-color: #303030; color: #e5e5e5;}</style>
+
+* Struktura kodu
+  Poniżej przedstawiam szkielet kodu. 
+  Pokazuje jak reprezentowany jest problem oraz jak ładowane są dane wejściowe.
+  W podpunktach do poszczególnych zadań przedstawię implementacje poszczególnych metod.
+  Dane są wczytywane ze standardowego wejścia.
+  #+begin_src python
+class Problem(object):
+    def __init__(self, alphabet, word):
+        self.sigma = alphabet
+        self.w = word
+        self.I = []
+        self.D = []
+
+    # Load the independency relation
+    def RI(self, I):
+        self.I = I
+        self.D = self._complement(self.I)
+        return self
+
+    # Load the dependency relation
+    def RD(self, D):
+        self.D = D
+        self.I = self._complement(self.D)
+        return self
+  
+
+def read_input():
+    lines = [l.rstrip() for l in sys.stdin.readlines()]
+    alphabet = lines[0].split(" ")
+
+    rel_type, *relation = lines[1].split(" ")
+    rels = [(relation[i], relation[i+1]) for i in range(0, len(relation), 2)]
+
+    word = lines[2]
+
+    problem = Problem(alphabet, word)
+    return problem.RI(rels) if rel_type == "I" else problem.RD(rels)
+
+
+if __name__ == "__main__":
+    prob = read_input()
+
+    print("=== PROB ===")
+    print(prob)
+
+    print("=== TRACE ===")
+    print(prob.w)
+    print(prob.trace())
+
+    print("=== FNF ===")
+    print(prob.fnf())
+
+    print("=== GRAPH ===")
+    g = prob.graph()
+    g.minify()
+    print(g.dot())
+
+    print("=== FNF FROM GRAPH ===")
+    print(g.as_fnf())
+
   #+end_src
+
+** Postać plików z problemami
+   #+begin_src 
+a b c d                     -           PIERWSZA LINIA TO ALFABET
+I a d d a b c c b           -           DRUGA LINIA TO RELACJA (NIE)ZALEŻNOSCI
+baadcb                      -           TRZECIA LINIA TO SŁOWO
+   #+end_src
+
+* Wyznacza relację niezależności I lub zależności D
+  Program wyznacza relację niezależności lub zależności.
+  W obu przypadkach robi się to podobnie, po prostu należy wyznaczyć dopełnienie.
+  Użytkownik wprowadzający dane ma możliwość wyspecyfikowania czy podaje I czy D.
+
+  #+begin_src python
+  def _complement(self, S):
+    return [pair for pair in itertools.product(self.sigma, self.sigma) if pair not in S]  
+  #+end_src
+
+* Wyznacza ślad [w] względem relacji I
+  Algorytm działa w ten sposób, że utrzymuje zbiór słów w danej klasie abastrakcji.
+  W każdej kolejnej iteracji algorytm przechodzi po słowach w zbiorze i próbuje dokonać przestawień niezależnych, sąsiadujących symboli w słowie.
+  W iteracji w której zbiór się nie zwiększył przerywamy pętlę i zwracamy.
+
+  #+begin_src python
+  # Generate a trace based on the word w and the relation I
+  def trace(self):
+      T = {self.w}
+      commutes = lambda x, y: (x, y) in self.I
+
+      while True:
+          T_next = set(T)
+
+          for w in T:
+              for i in range(len(w)-1):
+                  # For each neighboring characters check if independent.
+                  # If so, swap them and add to the set.
+                  prev, c1, c2, rest = w[:i], w[i], w[i+1], w[min(i+2, len(w)):]
+                  if commutes(c1, c2):
+                      T_next.add(prev + c2 + c1 + rest)
+
+          # If set hadn't changed, it is time to stop.
+          if T == T_next:
+              break
+          T = T_next
+
+      return T
+  #+end_src
+
+* Wyznacza postać normalną Foaty FNF([w]) śladu [w]
+  Zaimplementowany algorytm ze strony podanej w linku.
+  Najpierw tworzymy stosy wg. podanej instrukcji, a następnie zdejmujemy symbole które są na wierzchu.
+  Dla każdego zdjętego symbolu z wierzchołka usuwamy jedną gwiazdkę ze stosów zależnych.
+  Sortujemy zdjęte symbole i otrzymujemy część FNF.
+
+  #+begin_src python
+# Generate the Foata Normal Form
+    def fnf(self):
+        w, sigma, I, D = self.w, self.sigma, self.I, self.D
+        n = len(w)
+
+        # Prepare the stacks for each symbol in the alphabet
+        stacks = dict([(c, []) for c in sigma])
+        for c in w[::-1]:
+            for (ident, stack) in stacks.items():
+                if c == ident:
+                    stack.insert(0, c)
+                elif (c, ident) not in I:
+                    stack.insert(0, None)
+
+        fnf = []
+        empty = lambda stacks: list(itertools.chain(*stacks.values())) == []
+        while not empty(stacks):
+            # Get the symbols from stack tops
+            chars = [stack[0] for (ident, stack) in stacks.items() \
+                              if len(stack) > 0 and stack[0] != None]
+
+            # Remove the marking from the dependent stacks
+            for char in chars:
+                dependencies = [b for (a, b) in D if a == char]
+                for dep in dependencies:
+                    stack = stacks[dep]
+                    if len(stack) > 0 and stack[0] == None:
+                        stack.pop(0)
+
+            # Remove the chars from their stacks
+            for char in chars:
+                stack = stacks[char]
+                stack.pop(0)
+
+            # Sort the symbols and convert into a string
+            joined = ''.join(sorted(chars))
+            if joined != '':
+                fnf.append(joined)
+
+        return fnf  
+  #+end_src
+
+* Wyznacza graf zależności w postaci minimalnej dla słowa
+  Na podstawie FNF tworzymy graf zależności z nadmiarowymi krawędzami.
+
+  #+begin_src python
+    def graph(self):
+        cols = self.fnf()
+        edges = set([])
+
+        for i in range(len(cols)):
+            col1 = cols[i]
+            for sym1 in col1:
+                edg = [("{}_{}".format(sym1, i), "{}_{}".format(sym2, j)) \ 
+                             for j in range(i+1, len(cols)) \
+                             for sym2 in cols[j] if (sym1, sym2) \
+                             in self.D]
+                edges = edges.union(set(edg))
+
+        vertices = set(itertools.chain(*[[a, b] for (a, b) in edges]))
+
+        return Graph(vertices, edges)  
+  #+end_src
+
+** Klasa Graph
+   #+begin_src python
+   class Graph(object):
+     def __init__(self, vertices, edges):
+       self.V = vertices
+       self.E = edges
+  
+     def __repr__(self):
+       return str((self.V, self.E))   
+   #+end_src
+
+** Konwersja do formatu dot
+   #+begin_src python
+    # Dot format of the graph
+    def dot(self):
+        dot = "digraph g {\r\n"
+        for vertex in self.V:
+            lab = vertex.split("_")[0]
+            dot +=  "{}[label={}]\r\n".format(vertex, lab)
+        for (u, v) in self.E:
+            dot += "{} -> {}\r\n".format(u, v)
+        dot += "}"
+        return dot   
+   #+end_src
+
+** Usuwnie redundantnych krawędzi
+   Dla każdego wierzchołka v, dla każdego dziecka u wierzchołka v uruchamiamy DFS.
+   Usuwamy wszystkie krawędzie (u, v'), gdzie v' to to co znalazł DFS z wierzchołka v.
+
+   #+begin_src python
+    # Removes redundant edges
+    def minify(self):
+        [self.E.discard((u, v_prim)) for u in self.V \
+                                     for v in self._direct(u) \
+                                     for v_prim in self._dfs(v) if v_prim != v]
+   
+   # Returns direct neighbours of v
+    def _direct(self, v):
+        return set([b for (a, b) in self.E if a == v])
+
+    # Returns visited vertices through DFS traversal
+    def _dfs(self, v, visited = set([])):
+        if v in visited:
+            return set([])
+
+        results = set([v])
+
+        for u in self._direct(v):
+            result = self._dfs(u, results)
+            results = results.union(result)
+
+        return results
+#+end_src
+
+* Wyznacza postać normalną Foaty na podstawie grafu
+  Poniższe to metody w klasie ~Graph~.
+  Konwersja do FNF z grafu odbywa się za pomocą BFS i śledzeniu poziomu węzłów.
+#+begin_src python
+   def as_fnf(self):
+        # Nodes with no inbound edges should start BFS
+        inbound = dict([(v, 0) for v in self.V])
+        for (a, b) in self.E:
+            inbound[b] += 1
+
+        start_nodes = [k for (k, v) in inbound.items() if v == 0]
+        return self._bfs(start_nodes)
+
+    def _bfs(self, nodes):
+        visited = dict([(v, False) for v in self.V])
+        queue = set([(node, 0) for node in nodes])
+        fnf = []
+
+        while True:
+            new_queue = set([])
+            for (v, lvl) in queue:
+                visited[v] = lvl+1
+
+                for u in self._direct(v):
+                    items = [(x, l) for (x, l) in new_queue if x == u]
+                    if len(items) == 0:
+                        new_queue.add((u, lvl+1))
+                    else:
+                        x, l = items[0]
+                        if lvl > l:
+                            new_queue.discard(items[0])
+                            new_queue.add((u, lvl+1))
+
+            queue = new_queue
+            if len(queue) == 0:
+                break
+
+        fnf = []
+        while visited:
+            min_val = min(visited.values())
+
+            word = []
+            for (k, v) in dict(visited).items():
+                if v == min_val:
+                    sym = k.split("_")[0]
+                    word.append(sym)
+                    del visited[k]
+
+            fnf.append(''.join(sorted(set(word))))
+
+        return fnf  
+  #+end_src
+* Wyniki
+** Zestaw 1
+   #+begin_src 
+$ cat prob1 | python3 main.py
+=== PROB ===
+SIGMA: ['a', 'b', 'c', 'd']
+I: [('a', 'd'), ('d', 'a'), ('b', 'c'), ('c', 'b')]
+D: [('a', 'a'), ('a', 'b'), ('a', 'c'), ('b', 'a'), ('b', 'b'), ('b', 'd'), ('c', 'a'),
+     ('c', 'c'), ('c', 'd'), ('d', 'b'), ('d', 'c'), ('d', 'd')]
+w: baadcb
+=== TRACE ===
+baadcb
+{'badacb', 'baadbc', 'bdaabc', 'badabc', 'baadcb', 'bdaacb'}
+=== FNF ===
+['b', 'ad', 'a', 'bc']
+=== GRAPH ===
+digraph g {
+a_1[label=a]
+d_1[label=d]
+c_3[label=c]
+b_3[label=b]
+a_2[label=a]
+b_0[label=b]
+b_0 -> a_1
+b_0 -> d_1
+a_1 -> a_2
+d_1 -> c_3
+d_1 -> b_3
+a_2 -> c_3
+a_2 -> b_3
+}
+=== FNF FROM GRAPH ===
+['b', 'ad', 'a', 'bc']   
+   #+end_src
+** Zestaw 2
+   #+begin_src 
+$ cat prob2 | python3 main.py
+=== PROB ===
+SIGMA: ['a', 'b', 'c', 'd', 'e', 'f']
+I: [('a', 'd'), ('d', 'a'), ('b', 'e'), ('e', 'b'), ('c', 'd'), ('d', 'c'), ('c', 'f'), ('f', 'c')]
+D: [('a', 'a'), ('a', 'b'), ('a', 'c'), ('a', 'e'), ('a', 'f'), ('b', 'a'), ('b', 'b'), ('b', 'c'),
+    ('b', 'd'), ('b', 'f'), ('c', 'a'), ('c', 'b'), ('c', 'c'), ('c', 'e'), ('d', 'b'), ('d', 'd'),
+    ('d', 'e'), ('d', 'f'), ('e', 'a'), ('e', 'c'), ('e', 'd'), ('e', 'e'), ('e', 'f'), ('f', 'a'),
+    ('f', 'b'), ('f', 'd'), ('f', 'e'), ('f', 'f')]
+w: acdcfbbe
+=== TRACE ===
+acdcfbbe
+{'dafccbbe', 'accdfbbe', 'adfccbeb', 'accdfebb', 'acdcfbbe', 'acdcfebb', 'acdcfbeb', 'daccfbbe',
+ 'accdfbeb', 'dacfcebb', 'adfccebb', 'adcfcebb', 'adcfcbbe', 'adccfebb', 'daccfebb', 'dafccbeb',
+ 'dafccebb', 'acdfcbbe', 'acdfcbeb', 'adccfbbe', 'adfccbbe', 'adcfcbeb', 'adccfbeb', 'dacfcbbe',
+ 'daccfbeb', 'dacfcbeb', 'acdfcebb'}
+=== FNF ===
+['ad', 'cf', 'c', 'be', 'b']
+=== GRAPH ===
+digraph g {
+e_3[label=e]
+a_0[label=a]
+c_2[label=c]
+b_3[label=b]
+f_1[label=f]
+b_4[label=b]
+c_1[label=c]
+d_0[label=d]
+b_3 -> b_4
+c_2 -> e_3
+d_0 -> f_1
+c_2 -> b_3
+c_1 -> c_2
+f_1 -> e_3
+a_0 -> f_1
+a_0 -> c_1
+f_1 -> b_3
+}
+=== FNF FROM GRAPH ===
+['ad', 'cf', 'c', 'be', 'b']   
+   #+end_src
+** Zestaw 3
+   #+begin_src 
+$ cat prob3 | python3 main.py
+=== PROB ===
+SIGMA: ['a', 'b', 'c', 'd', 'e']
+I: [('a', 'c'), ('a', 'd'), ('b', 'd'), ('b', 'e'), ('c', 'a'), ('d', 'a'), ('d', 'b'), ('e', 'b')]
+D: [('a', 'b'), ('b', 'a'), ('b', 'c'), ('c', 'b'), ('d', 'c'), ('c', 'd'), ('e', 'd'), ('d', 'e'),
+    ('a', 'e'), ('e', 'a'), ('c', 'e'), ('e', 'c'), ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'),
+    ('e', 'e')]
+w: acebda
+=== TRACE ===
+acebda
+{'cabead', 'caedba', 'acebad', 'acedba', 'caebda', 'acebda', 'caebad', 'cabeda', 'acbead', 'acbeda'}
+=== FNF ===
+['ac', 'be', 'ad']
+=== GRAPH ===
+digraph g {
+d_2[label=d]
+c_0[label=c]
+a_2[label=a]
+a_0[label=a]
+e_1[label=e]
+b_1[label=b]
+c_0 -> b_1
+e_1 -> d_2
+b_1 -> a_2
+c_0 -> e_1
+a_0 -> e_1
+a_0 -> b_1
+e_1 -> a_2
+}
+=== FNF FROM GRAPH ===
+['ac', 'be', 'ad']   
+   #+end_src
