@@ -216,3 +216,7 @@ public/
 .dynamodb/
 
 # End of https://www.gitignore.io/api/node
+
+
+lab10/.ensime_cache
+lab10/.ensime
