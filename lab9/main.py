@@ -1,6 +1,97 @@
 import sys
 import itertools
 
+class Graph(object):
+    def __init__(self, vertices, edges):
+        self.V = vertices
+        self.E = edges
+
+    # Dot format of the graph
+    def dot(self):
+        dot = "digraph g {\r\n"
+        for vertex in self.V:
+            lab = vertex.split("_")[0]
+            dot +=  "{}[label={}]\r\n".format(vertex, lab)
+        for (u, v) in self.E:
+            dot += "{} -> {}\r\n".format(u, v)
+        dot += "}"
+        return dot
+
+    # Removes redundant edges
+    def minify(self):
+        # mistrzostwo czystego kodu
+        [self.E.discard((u, v_prim)) for u in self.V for v in self._direct(u) for v_prim in self._dfs(v) if v_prim != v]
+
+    def as_fnf(self):
+        # Nodes with no inbound edges should start BFS
+        inbound = dict([(v, 0) for v in self.V])
+        for (a, b) in self.E:
+            inbound[b] += 1
+
+        start_nodes = [k for (k, v) in inbound.items() if v == 0]
+        return self._bfs(start_nodes)
+
+    def _bfs(self, nodes):
+        visited = dict([(v, False) for v in self.V])
+        queue = set([(node, 0) for node in nodes])
+        fnf = []
+
+        while True:
+            new_queue = set([])
+            for (v, lvl) in queue:
+                visited[v] = lvl+1
+
+                for u in self._direct(v):
+                    items = [(x, l) for (x, l) in new_queue if x == u]
+                    if len(items) == 0:
+                        new_queue.add((u, lvl+1))
+                    else:
+                        x, l = items[0]
+                        if lvl > l:
+                            new_queue.discard(items[0])
+                            new_queue.add((u, lvl+1))
+
+            queue = new_queue
+            if len(queue) == 0:
+                break
+
+        fnf = []
+        while visited:
+            min_val = min(visited.values())
+
+            word = []
+            for (k, v) in dict(visited).items():
+                if v == min_val:
+                    sym = k.split("_")[0]
+                    word.append(sym)
+                    del visited[k]
+
+            fnf.append(''.join(sorted(set(word))))
+
+        return fnf
+
+
+    # Returns directly conected vertices
+    def _direct(self, v):
+        return set([b for (a, b) in self.E if a == v])
+
+
+    # Returns visited vertices
+    def _dfs(self, v, visited = set([])):
+        if v in visited:
+            return set([])
+
+        results = set([v])
+
+        for u in self._direct(v):
+            result = self._dfs(u, results)
+            results = results.union(result)
+
+        return results
+
+    def __repr__(self):
+        return str((self.V, self.E))
+
 class Problem(object):
     def __init__(self, alphabet, word):
         self.sigma = alphabet
@@ -83,6 +174,21 @@ class Problem(object):
 
         return fnf
 
+    def graph(self):
+        cols = self.fnf()
+        edges = set([])
+
+        for i in range(len(cols)):
+            col1 = cols[i]
+            for sym1 in col1:
+                edg = [("{}_{}".format(sym1, i), "{}_{}".format(sym2, j)) for j in range(i+1, len(cols)) for sym2 in cols[j] if (sym1, sym2) in self.D]
+                edges = edges.union(set(edg))
+
+        vertices = set(itertools.chain(*[[a, b] for (a, b) in edges]))
+
+        return Graph(vertices, edges)
+
+
     def __repr__(self):
         return "SIGMA: {}\nI: {}\nD: {}\nw: {}".format(self.sigma, self.I, self.D, self.w)
 
@@ -116,3 +222,10 @@ if __name__ == "__main__":
     print("=== FNF ===")
     print(prob.fnf())
 
+    print("=== GRAPH ===")
+    g = prob.graph()
+    g.minify()
+    print(g.dot())
+
+    print("=== FNF FROM GRAPH ===")
+    print(g.as_fnf())
